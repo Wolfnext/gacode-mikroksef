@@ -2,6 +2,20 @@
  * Utility functions for the frontend.
  */
 
+function parseDateValue(dateString: string): Date {
+  if (!dateString) return new Date(NaN);
+
+  const hasTime = dateString.includes(':');
+  const hasTimezone = /([zZ]|[+-]\d{2}:?\d{2})$/.test(dateString);
+  const normalized = dateString.includes(' ') ? dateString.replace(' ', 'T') : dateString;
+
+  if (hasTime && !hasTimezone) {
+    return new Date(`${normalized}Z`);
+  }
+
+  return new Date(normalized);
+}
+
 /**
  * Format currency value in PLN.
  */
@@ -20,7 +34,7 @@ export function formatCurrency(value: string | number, currency = 'PLN'): string
  * Format date in Polish locale.
  */
 export function formatDate(dateString: string): string {
-  const date = new Date(dateString);
+  const date = parseDateValue(dateString);
   return new Intl.DateTimeFormat('pl-PL', {
     year: 'numeric',
     month: '2-digit',
@@ -32,7 +46,7 @@ export function formatDate(dateString: string): string {
  * Format datetime in Polish locale.
  */
 export function formatDateTime(dateString: string): string {
-  const date = new Date(dateString);
+  const date = parseDateValue(dateString);
   return new Intl.DateTimeFormat('pl-PL', {
     year: 'numeric',
     month: '2-digit',
@@ -129,7 +143,7 @@ export function downloadBlob(blob: Blob, filename: string): void {
  * Get relative time string.
  */
 export function getRelativeTime(dateString: string): string {
-  const date = new Date(dateString);
+  const date = parseDateValue(dateString);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
   const diffMins = Math.floor(diffMs / 60000);

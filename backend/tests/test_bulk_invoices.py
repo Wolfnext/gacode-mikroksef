@@ -150,7 +150,9 @@ class TestBulkInvoiceIntegration:
         print("[1/5] Getting auth challenge...")
         challenge_response = await ksef_client.get_auth_challenge()
         challenge = challenge_response.get("challenge")
+        timestamp_ms = challenge_response.get("timestampMs")  # MUST use timestamp from challenge!
         print(f"      Challenge: {challenge[:20]}...")
+        print(f"      Timestamp: {timestamp_ms}")
 
         # Step 2: Encrypt token and init session
         print("[2/5] Initializing token session...")
@@ -159,19 +161,22 @@ class TestBulkInvoiceIntegration:
         if not crypto_service.has_public_key:
             keys = await ksef_client.get_public_keys()
             if keys and len(keys) > 0:
-                # v2 API returns list of certificates with base64-encoded DER
-                first_key = keys[0]
-                cert_data = first_key.get("publicKeyCertificate") or first_key.get("certificate")
+                # v2 API returns list of certificates - find one for KsefTokenEncryption
+                token_cert = None
+                for cert in keys:
+                    usage = cert.get("usage", [])
+                    if "KsefTokenEncryption" in usage:
+                        token_cert = cert
+                        break
+                if not token_cert:
+                    token_cert = keys[0]  # Fallback to first
+
+                cert_data = token_cert.get("certificate")
                 if cert_data:
                     crypto_service.set_ministry_public_key_from_der(cert_data)
-                else:
-                    # Fallback to PEM if available
-                    pem = first_key.get("publicKey") or str(first_key)
-                    crypto_service.set_ministry_public_key(pem)
+                    print(f"      Loaded certificate (valid until: {token_cert.get('validTo')})")
 
-        # v2 API: encrypt "token|timestamp"
-        import time
-        timestamp_ms = int(time.time() * 1000)
+        # v2 API: encrypt "token|timestamp" - MUST use timestamp from challenge response
         token_with_timestamp = f"{token}|{timestamp_ms}"
         encrypted_token = crypto_service.encrypt_token_v2(token_with_timestamp)
 
@@ -199,9 +204,13 @@ class TestBulkInvoiceIntegration:
                 # Try to redeem the token
                 redeem_response = await ksef_client.redeem_token(auth_token)
                 print(f"      Redeem response: {redeem_response}")
-                access_token = redeem_response.get("accessToken")
+                access_token_data = redeem_response.get("accessToken", {})
+                if isinstance(access_token_data, dict):
+                    access_token = access_token_data.get("token")
+                else:
+                    access_token = access_token_data
                 if access_token:
-                    print(f"      Got access token!")
+                    print(f"      Got access token: {access_token[:50]}...")
                     break
             except Exception as e:
                 error_msg = str(e)

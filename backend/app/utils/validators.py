@@ -15,6 +15,8 @@ def validate_nip(nip: str) -> bool:
 
     if len(nip) != 10 or not nip.isdigit():
         return False
+    if nip == "0" * 10:
+        return False
 
     # NIP checksum weights
     weights = [6, 5, 7, 2, 3, 4, 5, 6, 7]
@@ -37,6 +39,8 @@ def validate_pesel(pesel: str) -> bool:
     pesel = re.sub(r"[\s\-]", "", pesel)
 
     if len(pesel) != 11 or not pesel.isdigit():
+        return False
+    if pesel == "0" * 11:
         return False
 
     # PESEL checksum weights

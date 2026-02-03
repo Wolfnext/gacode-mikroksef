@@ -1,6 +1,7 @@
 """Pytest configuration and fixtures."""
 
 import os
+import importlib
 import pytest
 from typing import AsyncGenerator, Generator
 from unittest.mock import AsyncMock, MagicMock
@@ -17,8 +18,13 @@ os.environ["SECRET_KEY"] = "test-secret-key"
 os.environ["DEBUG"] = "true"
 
 from app.main import app
-from app.services.ksef_client import ksef_client
-from app.services.session_manager import session_manager
+
+# Import modules explicitly to avoid package-level name shadowing.
+invoices_api = importlib.import_module("app.api.invoices")
+invoice_service_module = importlib.import_module("app.services.invoice_service")
+ksef_client_module = importlib.import_module("app.services.ksef_client")
+crypto_service_module = importlib.import_module("app.services.crypto_service")
+session_manager_module = importlib.import_module("app.services.session_manager")
 from app.services.database import init_database, close_database
 
 
@@ -66,9 +72,28 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3US
 
     # Mock session init response
     mock_client.init_token_session.return_value = {
-        "sessionToken": {"token": "test-session-token"},
+        "authenticationToken": {
+            "token": "test-temp-token",
+            "validUntil": "2099-01-01T00:00:00Z",
+        },
         "referenceNumber": "20260203-TEST-REF-001",
         "timestamp": "2026-02-03T10:00:00Z",
+    }
+
+    # Mock auth challenge / status / redeem / online session
+    mock_client.get_auth_challenge.return_value = {
+        "challenge": "test-challenge",
+        "timestampMs": 1706954400000,
+    }
+    mock_client.get_auth_status.return_value = {"status": {"code": 200}}
+    mock_client.redeem_token.return_value = {
+        "accessToken": {
+            "token": "test-access-token",
+            "validUntil": "2099-01-01T00:00:00Z",
+        }
+    }
+    mock_client.create_online_session.return_value = {
+        "referenceNumber": "20260203-ONLINE-001"
     }
 
     # Mock session status response
@@ -139,7 +164,11 @@ MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEA0Z3US
     </Naglowek>
 </Faktura>"""
 
-    monkeypatch.setattr("app.services.ksef_client.ksef_client", mock_client)
+    # Patch all modules that imported the singleton directly.
+    monkeypatch.setattr(ksef_client_module, "ksef_client", mock_client)
+    monkeypatch.setattr(session_manager_module, "ksef_client", mock_client)
+    monkeypatch.setattr(invoice_service_module, "ksef_client", mock_client)
+    monkeypatch.setattr(invoices_api, "ksef_client", mock_client)
     return mock_client
 
 
@@ -149,10 +178,12 @@ def mock_crypto_service(monkeypatch):
     mock_crypto = MagicMock()
     mock_crypto.has_public_key = True
     mock_crypto.encrypt_token.return_value = "encrypted-token-base64"
+    mock_crypto.encrypt_token_v2.return_value = "encrypted-token-base64"
     mock_crypto.encrypt_invoice.return_value = b"encrypted-invoice-bytes"
     mock_crypto.compute_sha256.return_value = "sha256-hash-base64"
 
-    monkeypatch.setattr("app.services.crypto_service.crypto_service", mock_crypto)
+    monkeypatch.setattr(crypto_service_module, "crypto_service", mock_crypto)
+    monkeypatch.setattr(session_manager_module, "crypto_service", mock_crypto)
     return mock_crypto
 
 

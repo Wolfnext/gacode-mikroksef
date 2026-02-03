@@ -120,6 +120,8 @@ async def list_invoices(
             status_code=e.status_code or status.HTTP_502_BAD_GATEWAY,
             detail=str(e),
         )
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Failed to query invoices: {e}", exc_info=True)
         raise HTTPException(
