@@ -1,0 +1,24 @@
+# Core dependencies
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+httpx>=0.26.0
+pydantic>=2.5.0
+pydantic-settings>=2.1.0
+
+# Cryptography for KSeF encryption
+cryptography>=42.0.0
+
+# XML processing
+lxml>=5.1.0
+
+# File uploads
+python-multipart>=0.0.6
+
+# Database
+aiosqlite>=0.19.0
+
+# JWT tokens
+python-jose[cryptography]>=3.3.0
+
+# Password hashing
+passlib[bcrypt]>=1.7.4

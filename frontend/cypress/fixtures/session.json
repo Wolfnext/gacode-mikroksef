@@ -1,0 +1,18 @@
+{
+  "active": {
+    "referenceNumber": "20260203-TEST-REF-001",
+    "processingCode": 200,
+    "processingDescription": "Active",
+    "numberOfElements": 5,
+    "timestamp": "2026-02-03T10:00:00Z",
+    "isActive": true
+  },
+  "inactive": {
+    "referenceNumber": "20260203-TEST-REF-001",
+    "processingCode": 400,
+    "processingDescription": "Expired",
+    "numberOfElements": 0,
+    "timestamp": "2026-02-03T10:00:00Z",
+    "isActive": false
+  }
+}

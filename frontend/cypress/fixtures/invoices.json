@@ -1,0 +1,84 @@
+{
+  "list": {
+    "timestamp": "2026-02-03T10:00:00Z",
+    "referenceNumber": "cache",
+    "numberOfElements": 3,
+    "pageSize": 50,
+    "pageOffset": 0,
+    "hasMore": false,
+    "invoiceHeaderList": [
+      {
+        "invoiceReferenceNumber": "FV/2026/001",
+        "ksefReferenceNumber": "1234567890-20260203-ABC123-XY",
+        "invoicingDate": "2026-02-01",
+        "acquisitionTimestamp": "2026-02-01T12:00:00Z",
+        "subjectBy": {
+          "identifierType": "nip",
+          "identifier": "1234567890",
+          "name": "Test Company Sp. z o.o."
+        },
+        "subjectTo": {
+          "identifierType": "nip",
+          "identifier": "0987654321",
+          "name": "Client Company S.A."
+        },
+        "net": "1000.00",
+        "vat": "230.00",
+        "gross": "1230.00",
+        "currency": "PLN",
+        "invoiceType": "VAT"
+      },
+      {
+        "invoiceReferenceNumber": "FV/2026/002",
+        "ksefReferenceNumber": "1234567890-20260203-DEF456-ZW",
+        "invoicingDate": "2026-02-02",
+        "acquisitionTimestamp": "2026-02-02T14:00:00Z",
+        "subjectBy": {
+          "identifierType": "nip",
+          "identifier": "1234567890",
+          "name": "Test Company Sp. z o.o."
+        },
+        "subjectTo": {
+          "identifierType": "nip",
+          "identifier": "5555555555",
+          "name": "Another Client Sp. z o.o."
+        },
+        "net": "5000.00",
+        "vat": "1150.00",
+        "gross": "6150.00",
+        "currency": "PLN",
+        "invoiceType": "VAT"
+      },
+      {
+        "invoiceReferenceNumber": "KOR/2026/001",
+        "ksefReferenceNumber": "1234567890-20260203-GHI789-AB",
+        "invoicingDate": "2026-02-03",
+        "acquisitionTimestamp": "2026-02-03T09:00:00Z",
+        "subjectBy": {
+          "identifierType": "nip",
+          "identifier": "1234567890",
+          "name": "Test Company Sp. z o.o."
+        },
+        "subjectTo": {
+          "identifierType": "nip",
+          "identifier": "0987654321",
+          "name": "Client Company S.A."
+        },
+        "net": "-200.00",
+        "vat": "-46.00",
+        "gross": "-246.00",
+        "currency": "PLN",
+        "invoiceType": "KOR"
+      }
+    ]
+  },
+  "empty": {
+    "timestamp": "2026-02-03T10:00:00Z",
+    "referenceNumber": "cache",
+    "numberOfElements": 0,
+    "pageSize": 50,
+    "pageOffset": 0,
+    "hasMore": false,
+    "invoiceHeaderList": []
+  }
+}

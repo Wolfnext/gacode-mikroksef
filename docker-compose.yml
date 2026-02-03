@@ -1,0 +1,49 @@
+version: '3.8'
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mikroksef-backend
+    ports:
+      - "8000:8000"
+    environment:
+      - KSEF_ENVIRONMENT=${KSEF_ENVIRONMENT:-test}
+      - KSEF_API_URL=${KSEF_API_URL:-}
+      - COMPANY_NIP=${COMPANY_NIP}
+      - KSEF_AUTH_TOKEN=${KSEF_AUTH_TOKEN}
+      - DATABASE_URL=sqlite:///./data/mikroksef.db
+      - SECRET_KEY=${SECRET_KEY:-change-me-in-production}
+      - DEBUG=${DEBUG:-false}
+      - CORS_ORIGINS=http://localhost:3000,http://frontend:3000
+      - LOG_LEVEL=${LOG_LEVEL:-INFO}
+    volumes:
+      - backend-data:/app/data
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "python", "-c", "import httpx; httpx.get('http://localhost:8000/api/health/live')"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 10s
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+      args:
+        - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    container_name: mikroksef-frontend
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    depends_on:
+      backend:
+        condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  backend-data:
+    driver: local

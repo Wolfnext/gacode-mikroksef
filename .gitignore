@@ -1,0 +1,77 @@
+# Dependencies
+node_modules/
+venv/
+.venv/
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment
+.env
+.env.local
+.env.*.local
+*.env
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.project
+.settings/
+
+# Build outputs
+build/
+dist/
+*.egg-info/
+.eggs/
+*.egg
+.next/
+out/
+
+# Test & Coverage
+.coverage
+htmlcov/
+.pytest_cache/
+.mypy_cache/
+coverage/
+cypress/videos/
+cypress/screenshots/
+
+# Logs
+*.log
+logs/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Certificates (sensitive)
+*.pem
+*.key
+*.crt
+*.p12
+*.pfx
+
+# Temporary files
+*.tmp
+*.temp
+.cache/
+tmp/
+
+# Docker
+.docker/
+
+# Secrets
+secrets/
+credentials/

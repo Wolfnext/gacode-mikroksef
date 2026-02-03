@@ -1,0 +1,47 @@
+version: '3.8'
+
+# Development docker-compose with hot reloading
+
+services:
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: mikroksef-backend-dev
+    ports:
+      - "8000:8000"
+    environment:
+      - KSEF_ENVIRONMENT=${KSEF_ENVIRONMENT:-test}
+      - KSEF_API_URL=${KSEF_API_URL:-}
+      - COMPANY_NIP=${COMPANY_NIP}
+      - KSEF_AUTH_TOKEN=${KSEF_AUTH_TOKEN}
+      - DATABASE_URL=sqlite:///./data/mikroksef.db
+      - SECRET_KEY=${SECRET_KEY:-dev-secret-key}
+      - DEBUG=true
+      - CORS_ORIGINS=http://localhost:3000,http://127.0.0.1:3000
+      - LOG_LEVEL=DEBUG
+    volumes:
+      - ./backend/app:/app/app:ro
+      - backend-data-dev:/app/data
+    command: uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
+    restart: unless-stopped
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: mikroksef-frontend-dev
+    ports:
+      - "3000:3000"
+    environment:
+      - NEXT_PUBLIC_API_URL=http://localhost:8000/api
+    volumes:
+      - ./frontend/src:/app/src:ro
+      - ./frontend/public:/app/public:ro
+    depends_on:
+      - backend
+    restart: unless-stopped
+
+volumes:
+  backend-data-dev:
+    driver: local
