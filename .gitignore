@@ -42,6 +42,9 @@ htmlcov/
 coverage/
 cypress/videos/
 cypress/screenshots/
+frontend/cypress/videos/
+frontend/cypress/screenshots/
+frontend/.cypress-cache/
 
 # Logs
 *.log
