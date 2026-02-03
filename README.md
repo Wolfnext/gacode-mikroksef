@@ -1,6 +1,6 @@
-# mikroKSeF
+# GACODE mikroKSeF
 
-Lokalny klient webowy do obsługi **Krajowego Systemu e-Faktur (KSeF)** w Polsce.
+Open source i cloud-ready klient webowy do obsługi **Krajowego Systemu e-Faktur (KSeF)** w Polsce, rozwijany przez GACODE.
 
 ![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
@@ -91,7 +91,7 @@ Lokalny klient webowy do obsługi **Krajowego Systemu e-Faktur (KSeF)** w Polsce
 
 ```bash
 # Klonowanie repozytorium
-git clone https://github.com/your-username/mikroksef.git
+git clone https://github.com/Wolfnext/gacode-mikroksef.git
 cd mikroksef
 
 # Backend
@@ -108,7 +108,7 @@ npm install
 ### Metoda 2: Docker
 
 ```bash
-git clone https://github.com/your-username/mikroksef.git
+git clone https://github.com/Wolfnext/gacode-mikroksef.git
 cd mikroksef
 docker-compose build
 ```
@@ -116,7 +116,7 @@ docker-compose build
 ### Metoda 3: Make
 
 ```bash
-git clone https://github.com/your-username/mikroksef.git
+git clone https://github.com/Wolfnext/gacode-mikroksef.git
 cd mikroksef
 make install
 ```
@@ -442,7 +442,7 @@ mikroKSeF/
 
 ## Licencja
 
-MIT License - zobacz [LICENSE](LICENSE)
+MIT License - zobacz [LICENSE](LICENSE). Projekt jest open source. Oprogramowanie dostarczane jest "AS IS", bez gwarancji; autorzy nie ponoszą odpowiedzialności za szkody.
 
 ---
 
