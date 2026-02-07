@@ -1,12 +1,15 @@
 """Invoice endpoints."""
 
 import logging
-from datetime import date
+from datetime import date, datetime
 from decimal import Decimal
 from typing import Optional
 
+import httpx
 from fastapi import APIRouter, HTTPException, Query, status
 from fastapi.responses import Response
+
+from app.config import get_settings
 
 from app.models.invoice import (
     InvoiceListResponse,
@@ -19,6 +22,7 @@ from app.models.invoice import (
 from app.services.invoice_service import invoice_service
 from app.services.session_manager import session_manager
 from app.services.ksef_client import ksef_client
+from app.services import database as db
 from app.utils.exceptions import KSeFSessionError, KSeFAPIError
 
 logger = logging.getLogger(__name__)
@@ -127,6 +131,49 @@ async def list_invoices(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to query invoices: {str(e)}",
+        )
+
+
+@router.get(
+    "/search",
+    response_model=InvoiceListResponse,
+    summary="Search invoices",
+    description="Full-text search across invoice metadata and content.",
+)
+async def search_invoices_endpoint(
+    q: str = Query(..., min_length=2, description="Search query"),
+    subject_type: Optional[SubjectType] = Query(
+        default=None, alias="subjectType",
+    ),
+    page_size: int = Query(default=50, ge=1, le=100, alias="pageSize"),
+    page_offset: int = Query(default=0, ge=0, alias="pageOffset"),
+) -> InvoiceListResponse:
+    """Search invoices using full-text search."""
+    try:
+        is_issued = None
+        if subject_type == SubjectType.SUBJECT1:
+            is_issued = True
+        elif subject_type == SubjectType.SUBJECT2:
+            is_issued = False
+
+        total = await db.count_search_results(q, is_issued)
+        rows = await db.search_invoices(q, is_issued, page_size, page_offset)
+        headers = [invoice_service._db_to_invoice_header(row) for row in rows]
+
+        return InvoiceListResponse(
+            timestamp=datetime.utcnow(),
+            referenceNumber="search",
+            numberOfElements=total,
+            pageSize=page_size,
+            pageOffset=page_offset,
+            hasMore=(page_offset + page_size) < total,
+            invoiceHeaderList=headers,
+        )
+    except Exception as e:
+        logger.error(f"Search failed: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Search failed: {str(e)}",
         )
 
 
@@ -302,4 +349,126 @@ async def download_upo(ksef_reference_number: str) -> Response:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Failed to download UPO: {str(e)}",
+        )
+
+
+@router.get(
+    "/{ksef_reference_number}/pdf",
+    summary="Download invoice PDF",
+    description="Generate and download invoice as PDF.",
+)
+async def download_invoice_pdf(ksef_reference_number: str) -> Response:
+    """Generate PDF visualization of an invoice via the PDF microservice."""
+    try:
+        xml_content = await invoice_service.download_invoice_xml(ksef_reference_number)
+
+        if not xml_content:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Invoice XML not available: {ksef_reference_number}",
+            )
+
+        settings = get_settings()
+
+        from app.utils.qr_generator import generate_ksef_qr_url
+        qr_url = generate_ksef_qr_url(ksef_reference_number, settings.ksef_environment)
+
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            pdf_response = await client.post(
+                f"{settings.pdf_service_url}/generate-invoice",
+                content=xml_content if isinstance(xml_content, bytes) else xml_content.encode("utf-8"),
+                headers={
+                    "Content-Type": "application/xml",
+                    "X-KSeF-Reference": ksef_reference_number,
+                    "X-QR-Code": qr_url,
+                },
+            )
+
+        if pdf_response.status_code != 200:
+            logger.error(f"PDF service error: {pdf_response.status_code} {pdf_response.text}")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="PDF generation service returned an error",
+            )
+
+        return Response(
+            content=pdf_response.content,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="{ksef_reference_number}.pdf"'
+            },
+        )
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Failed to generate invoice PDF: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate invoice PDF: {str(e)}",
+        )
+
+
+@router.get(
+    "/{ksef_reference_number}/upo-pdf",
+    summary="Download UPO as PDF",
+    description="Generate and download UPO as PDF.",
+)
+async def download_upo_pdf(ksef_reference_number: str) -> Response:
+    """Generate PDF visualization of UPO document via the PDF microservice."""
+    token = require_session()
+
+    try:
+        status_response = await ksef_client.get_invoice_status(
+            token, ksef_reference_number
+        )
+
+        upo_ref = status_response.get("upoReferenceNumber")
+        if not upo_ref:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="UPO not available for this invoice",
+            )
+
+        session_ref = session_manager.current_session.reference_number
+        upo_content = await ksef_client.download_upo(token, session_ref, upo_ref)
+
+        settings = get_settings()
+        async with httpx.AsyncClient(timeout=30.0) as client:
+            pdf_response = await client.post(
+                f"{settings.pdf_service_url}/generate-upo",
+                content=upo_content if isinstance(upo_content, bytes) else upo_content.encode("utf-8"),
+                headers={
+                    "Content-Type": "application/xml",
+                    "X-KSeF-Reference": ksef_reference_number,
+                },
+            )
+
+        if pdf_response.status_code != 200:
+            logger.error(f"UPO PDF service error: {pdf_response.status_code} {pdf_response.text}")
+            raise HTTPException(
+                status_code=status.HTTP_502_BAD_GATEWAY,
+                detail="UPO PDF generation service returned an error",
+            )
+
+        return Response(
+            content=pdf_response.content,
+            media_type="application/pdf",
+            headers={
+                "Content-Disposition": f'attachment; filename="UPO_{ksef_reference_number}.pdf"'
+            },
+        )
+
+    except HTTPException:
+        raise
+    except KSeFAPIError as e:
+        raise HTTPException(
+            status_code=e.status_code or status.HTTP_502_BAD_GATEWAY,
+            detail=str(e),
+        )
+    except Exception as e:
+        logger.error(f"Failed to generate UPO PDF: {e}", exc_info=True)
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to generate UPO PDF: {str(e)}",
         )

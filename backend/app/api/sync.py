@@ -193,3 +193,66 @@ async def sync_received_invoices(
         fullSync=full_sync,
     )
     return await sync_invoices(request)
+
+
+# ----- Auto-Sync Configuration -----
+
+from pydantic import BaseModel, Field as PydanticField
+from app.services.scheduler import sync_scheduler
+
+
+class AutoSyncConfigRequest(BaseModel):
+    enabled: bool = False
+    interval_minutes: int = PydanticField(default=60, alias="intervalMinutes", ge=5, le=1440)
+    sync_issued: bool = PydanticField(default=True, alias="syncIssued")
+    sync_received: bool = PydanticField(default=True, alias="syncReceived")
+
+    class Config:
+        populate_by_name = True
+
+
+@router.get(
+    "/auto-sync/config",
+    summary="Get auto-sync configuration",
+)
+async def get_auto_sync_config():
+    """Get current auto-sync configuration."""
+    config = await sync_scheduler.get_config()
+    if not config:
+        return {
+            "enabled": False,
+            "intervalMinutes": 60,
+            "syncIssued": True,
+            "syncReceived": True,
+        }
+    return {
+        "enabled": config.get("enabled", False),
+        "intervalMinutes": config.get("interval_minutes", 60),
+        "syncIssued": config.get("sync_issued", True),
+        "syncReceived": config.get("sync_received", True),
+        "lastRunAt": config.get("last_run_at"),
+    }
+
+
+@router.put(
+    "/auto-sync/config",
+    summary="Update auto-sync configuration",
+)
+async def update_auto_sync_config(request: AutoSyncConfigRequest):
+    """Update auto-sync configuration."""
+    config = {
+        "enabled": request.enabled,
+        "interval_minutes": request.interval_minutes,
+        "sync_issued": request.sync_issued,
+        "sync_received": request.sync_received,
+    }
+    updated = await sync_scheduler.update_config(config)
+    if not updated:
+        updated = config
+    return {
+        "enabled": updated.get("enabled", False),
+        "intervalMinutes": updated.get("interval_minutes", 60),
+        "syncIssued": updated.get("sync_issued", True),
+        "syncReceived": updated.get("sync_received", True),
+        "lastRunAt": updated.get("last_run_at"),
+    }

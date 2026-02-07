@@ -4,7 +4,7 @@ import Link from 'next/link';
 import { SessionStatus } from '@/components/auth/SessionStatus';
 import { ThemeToggle } from '@/components/ui/ThemeToggle';
 import type { SessionStatus as SessionStatusType } from '@/types';
-import { FileText } from 'lucide-react';
+import { FileText, Settings } from 'lucide-react';
 
 interface HeaderProps {
   session: SessionStatusType | null;
@@ -38,6 +38,13 @@ export function Header({ session, onRefresh, onLogout, loading }: HeaderProps) {
                   className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white"
                 >
                   Faktury
+                </Link>
+                <Link
+                  href="/settings"
+                  className="text-sm font-medium text-gray-600 dark:text-gray-300 hover:text-gray-900 dark:hover:text-white flex items-center"
+                >
+                  <Settings className="w-4 h-4 mr-1" />
+                  Ustawienia
                 </Link>
               </nav>
             )}

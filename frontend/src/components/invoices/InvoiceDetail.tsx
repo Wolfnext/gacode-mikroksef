@@ -14,6 +14,8 @@ interface InvoiceDetailViewProps {
   invoice: InvoiceDetailType;
   onDownload: () => void;
   onDownloadUpo: () => void;
+  onDownloadPdf: () => void;
+  onDownloadUpoPdf: () => void;
 }
 
 // Party info card component
@@ -184,7 +186,7 @@ function VatSummaryTable({ summary, totalNet, totalVat, totalGross }: {
   );
 }
 
-export function InvoiceDetailView({ invoice, onDownload, onDownloadUpo }: InvoiceDetailViewProps) {
+export function InvoiceDetailView({ invoice, onDownload, onDownloadUpo, onDownloadPdf, onDownloadUpoPdf }: InvoiceDetailViewProps) {
   const { header, xmlContent, upoAvailable, cachedAt } = invoice;
   const [showXml, setShowXml] = useState(false);
 
@@ -220,15 +222,25 @@ export function InvoiceDetailView({ invoice, onDownload, onDownloadUpo }: Invoic
             </div>
 
             <div className="flex items-center gap-2 print:hidden">
+              <Button variant="secondary" size="sm" onClick={onDownloadPdf} className="bg-white/10 hover:bg-white/20 text-white border-white/30">
+                <Download className="w-4 h-4 mr-1" />
+                PDF
+              </Button>
               <Button variant="secondary" size="sm" onClick={onDownload} className="bg-white/10 hover:bg-white/20 text-white border-white/30">
                 <Download className="w-4 h-4 mr-1" />
                 XML
               </Button>
               {upoAvailable && (
-                <Button variant="secondary" size="sm" onClick={onDownloadUpo} className="bg-white/10 hover:bg-white/20 text-white border-white/30">
-                  <FileText className="w-4 h-4 mr-1" />
-                  UPO
-                </Button>
+                <>
+                  <Button variant="secondary" size="sm" onClick={onDownloadUpoPdf} className="bg-white/10 hover:bg-white/20 text-white border-white/30">
+                    <FileText className="w-4 h-4 mr-1" />
+                    UPO PDF
+                  </Button>
+                  <Button variant="secondary" size="sm" onClick={onDownloadUpo} className="bg-white/10 hover:bg-white/20 text-white border-white/30">
+                    <FileText className="w-4 h-4 mr-1" />
+                    UPO XML
+                  </Button>
+                </>
               )}
             </div>
           </div>

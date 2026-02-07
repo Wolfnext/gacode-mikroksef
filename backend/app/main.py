@@ -33,10 +33,22 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
     await init_database()
     logger.info("Database initialized")
 
+    # Start auto-sync scheduler
+    from app.services.scheduler import sync_scheduler
+    try:
+        await sync_scheduler.start()
+        logger.info("Auto-sync scheduler initialized")
+    except Exception as e:
+        logger.warning(f"Failed to start auto-sync scheduler: {e}")
+
     yield
 
     # Shutdown
     logger.info("Shutting down...")
+    try:
+        await sync_scheduler.stop()
+    except Exception:
+        pass
     await session_manager.close_all_sessions()
     await close_database()
     logger.info("Cleanup complete")

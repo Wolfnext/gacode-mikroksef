@@ -22,6 +22,8 @@ export default function InvoiceDetailPage() {
     fetchInvoiceDetail,
     downloadInvoice,
     downloadUpo,
+    downloadPdf,
+    downloadUpoPdf,
     clearError,
   } = useInvoices();
 
@@ -82,6 +84,8 @@ export default function InvoiceDetailPage() {
             invoice={invoice}
             onDownload={() => downloadInvoice(ksefRef)}
             onDownloadUpo={() => downloadUpo(ksefRef)}
+            onDownloadPdf={() => downloadPdf(ksefRef)}
+            onDownloadUpoPdf={() => downloadUpoPdf(ksefRef)}
           />
         ) : (
           <Alert variant="error">

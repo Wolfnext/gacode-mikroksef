@@ -16,8 +16,8 @@ interface InvoiceListProps {
   pageOffset: number;
   subjectType: 'subject1' | 'subject2';
   onDownload: (ksefRef: string) => void;
-  onNextPage: () => void;
-  onPrevPage: () => void;
+  onNextPage?: () => void;
+  onPrevPage?: () => void;
 }
 
 export function InvoiceList({

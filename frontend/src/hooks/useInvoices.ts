@@ -21,6 +21,8 @@ interface UseInvoicesReturn {
   fetchInvoiceDetail: (ksefRef: string) => Promise<InvoiceDetail | null>;
   downloadInvoice: (ksefRef: string) => Promise<void>;
   downloadUpo: (ksefRef: string) => Promise<void>;
+  downloadPdf: (ksefRef: string) => Promise<void>;
+  downloadUpoPdf: (ksefRef: string) => Promise<void>;
   setPageOffset: (offset: number) => void;
   nextPage: () => void;
   prevPage: () => void;
@@ -111,6 +113,26 @@ export function useInvoices(initialPageSize = 50): UseInvoicesReturn {
     }
   }, []);
 
+  // Download invoice PDF
+  const downloadPdf = useCallback(async (ksefRef: string) => {
+    try {
+      const blob = await invoicesApi.downloadPdf(ksefRef);
+      downloadBlob(blob, `${ksefRef}.pdf`);
+    } catch (e) {
+      setError('Nie udało się wygenerować PDF faktury');
+    }
+  }, []);
+
+  // Download UPO PDF
+  const downloadUpoPdf = useCallback(async (ksefRef: string) => {
+    try {
+      const blob = await invoicesApi.downloadUpoPdf(ksefRef);
+      downloadBlob(blob, `UPO_${ksefRef}.pdf`);
+    } catch (e) {
+      setError('Nie udało się wygenerować PDF UPO');
+    }
+  }, []);
+
   // Pagination
   const nextPage = useCallback(() => {
     if (pageOffset + pageSize < totalCount) {
@@ -142,6 +164,8 @@ export function useInvoices(initialPageSize = 50): UseInvoicesReturn {
     fetchInvoiceDetail,
     downloadInvoice,
     downloadUpo,
+    downloadPdf,
+    downloadUpoPdf,
     setPageOffset,
     nextPage,
     prevPage,

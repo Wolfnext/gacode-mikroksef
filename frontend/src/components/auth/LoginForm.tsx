@@ -80,14 +80,6 @@ export function LoginForm({ onLogin, loading, error }: LoginFormProps) {
           </Button>
         </form>
 
-        <div className="mt-6 text-center">
-          <p className="text-xs text-gray-500 dark:text-gray-400">
-            Połączenie z: <span className="font-mono">ksef-test.mf.gov.pl</span>
-          </p>
-          <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
-            Środowisko testowe
-          </p>
-        </div>
       </CardContent>
     </Card>
   );

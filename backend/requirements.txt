@@ -22,3 +22,6 @@ python-jose[cryptography]>=3.3.0
 
 # Password hashing
 passlib[bcrypt]>=1.7.4
+
+# Scheduling
+apscheduler>=3.10.0

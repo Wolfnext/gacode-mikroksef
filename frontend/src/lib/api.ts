@@ -13,6 +13,12 @@ import type {
   SyncResponse,
   SyncStatus,
 } from '@/types';
+import type {
+  AnalyticsSummary,
+  AutoSyncConfig,
+  NotificationConfig,
+  NotificationHistoryEntry,
+} from '@/types/analytics';
 
 const API_BASE_URL = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:8000/api';
 
@@ -115,6 +121,24 @@ export const invoicesApi = {
   },
 
   /**
+   * Search invoices.
+   */
+  search: (params: {
+    q: string;
+    subjectType?: 'subject1' | 'subject2';
+    pageSize?: number;
+    pageOffset?: number;
+  }): Promise<ApiResponse<InvoiceListResponse>> => {
+    const searchParams = new URLSearchParams();
+    searchParams.set('q', params.q);
+    if (params.subjectType) searchParams.set('subjectType', params.subjectType);
+    if (params.pageSize) searchParams.set('pageSize', params.pageSize.toString());
+    if (params.pageOffset) searchParams.set('pageOffset', params.pageOffset.toString());
+
+    return fetchApi<InvoiceListResponse>(`/invoices/search?${searchParams}`);
+  },
+
+  /**
    * Get invoice detail.
    */
   get: (ksefReferenceNumber: string): Promise<ApiResponse<InvoiceDetail>> =>
@@ -151,6 +175,36 @@ export const invoicesApi = {
 
     if (!response.ok) {
       throw new Error('UPO download failed');
+    }
+
+    return response.blob();
+  },
+
+  /**
+   * Download invoice as PDF.
+   */
+  downloadPdf: async (ksefReferenceNumber: string): Promise<Blob> => {
+    const response = await fetch(
+      `${API_BASE_URL}/invoices/${encodeURIComponent(ksefReferenceNumber)}/pdf`
+    );
+
+    if (!response.ok) {
+      throw new Error('PDF generation failed');
+    }
+
+    return response.blob();
+  },
+
+  /**
+   * Download UPO as PDF.
+   */
+  downloadUpoPdf: async (ksefReferenceNumber: string): Promise<Blob> => {
+    const response = await fetch(
+      `${API_BASE_URL}/invoices/${encodeURIComponent(ksefReferenceNumber)}/upo-pdf`
+    );
+
+    if (!response.ok) {
+      throw new Error('UPO PDF generation failed');
     }
 
     return response.blob();
@@ -214,6 +268,73 @@ export const syncApi = {
 
     return fetchApi<SyncResponse>(`/sync/received?${params}`, { method: 'POST' });
   },
+
+  /**
+   * Get auto-sync configuration.
+   */
+  getAutoSyncConfig: (): Promise<ApiResponse<AutoSyncConfig>> =>
+    fetchApi<AutoSyncConfig>('/sync/auto-sync/config'),
+
+  /**
+   * Update auto-sync configuration.
+   */
+  updateAutoSyncConfig: (config: AutoSyncConfig): Promise<ApiResponse<AutoSyncConfig>> =>
+    fetchApi<AutoSyncConfig>('/sync/auto-sync/config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    }),
+};
+
+// ===== Analytics API =====
+
+export const analyticsApi = {
+  /**
+   * Get analytics data.
+   */
+  get: (params?: {
+    dateFrom?: string;
+    dateTo?: string;
+    months?: number;
+  }): Promise<ApiResponse<AnalyticsSummary>> => {
+    const searchParams = new URLSearchParams();
+    if (params?.dateFrom) searchParams.set('dateFrom', params.dateFrom);
+    if (params?.dateTo) searchParams.set('dateTo', params.dateTo);
+    if (params?.months) searchParams.set('months', params.months.toString());
+
+    const queryString = searchParams.toString();
+    return fetchApi<AnalyticsSummary>(`/analytics${queryString ? `?${queryString}` : ''}`);
+  },
+};
+
+// ===== Notifications API =====
+
+export const notificationsApi = {
+  /**
+   * Get notification configuration.
+   */
+  getConfig: (): Promise<ApiResponse<NotificationConfig>> =>
+    fetchApi<NotificationConfig>('/notifications/config'),
+
+  /**
+   * Update notification configuration.
+   */
+  updateConfig: (config: NotificationConfig): Promise<ApiResponse<NotificationConfig>> =>
+    fetchApi<NotificationConfig>('/notifications/config', {
+      method: 'PUT',
+      body: JSON.stringify(config),
+    }),
+
+  /**
+   * Send test notification.
+   */
+  test: (): Promise<ApiResponse<{ status: string; results: Record<string, boolean> }>> =>
+    fetchApi('/notifications/test', { method: 'POST' }),
+
+  /**
+   * Get notification history.
+   */
+  getHistory: (): Promise<ApiResponse<NotificationHistoryEntry[]>> =>
+    fetchApi<NotificationHistoryEntry[]>('/notifications/history'),
 };
 
 // ===== Health API =====
@@ -231,5 +352,7 @@ export default {
   auth: authApi,
   invoices: invoicesApi,
   sync: syncApi,
+  analytics: analyticsApi,
+  notifications: notificationsApi,
   health: healthApi,
 };

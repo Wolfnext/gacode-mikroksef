@@ -390,10 +390,18 @@ class InvoiceService:
                     ksef_reference_number,
                 )
                 # Cache it
-                await db.update_invoice_xml(
-                    ksef_reference_number,
-                    xml_bytes.decode("utf-8"),
-                )
+                xml_str = xml_bytes.decode("utf-8")
+                await db.update_invoice_xml(ksef_reference_number, xml_str)
+
+                # Update FTS search content
+                try:
+                    from app.utils.xml_extractor import extract_searchable_text
+                    search_content = extract_searchable_text(xml_str)
+                    if search_content:
+                        await db.update_invoice_search_content(ksef_reference_number, search_content)
+                except Exception as e:
+                    logger.warning(f"Failed to index invoice for search: {e}")
+
                 return xml_bytes
             except Exception as e:
                 logger.error(f"Failed to download invoice: {e}")
@@ -432,6 +440,7 @@ class InvoiceService:
             "updated_invoices": 0,
             "errors": [],
         }
+        new_invoice_refs: List[str] = []
 
         try:
             if full_sync:
@@ -502,6 +511,7 @@ class InvoiceService:
                             stats["updated_invoices"] += 1
                         else:
                             stats["new_invoices"] += 1
+                            new_invoice_refs.append(parsed["ksef_reference_number"])
 
                         # Track last acquisition timestamp
                         if parsed.get("acquisition_timestamp"):
@@ -525,6 +535,18 @@ class InvoiceService:
                 page_offset += 1
 
             stats["status"] = "completed"
+
+            # Send notifications for new invoices
+            if new_invoice_refs:
+                try:
+                    from app.services.notification_service import notification_service
+                    await notification_service.notify_new_invoices(
+                        count=len(new_invoice_refs),
+                        refs=new_invoice_refs,
+                        sync_type=subject_type.value,
+                    )
+                except Exception as e:
+                    logger.warning(f"Failed to send notifications: {e}")
 
             # Update sync record
             await db.update_sync_record(

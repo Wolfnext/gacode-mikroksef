@@ -7,12 +7,17 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/Card';
 import { Button } from '@/components/ui/Button';
 import { Alert } from '@/components/ui/Alert';
 import { Spinner } from '@/components/ui/Spinner';
+import { SummaryCards } from '@/components/analytics/SummaryCards';
+import { MonthlyChart } from '@/components/analytics/MonthlyChart';
+import { TypeBreakdown } from '@/components/analytics/TypeBreakdown';
+import { TopCounterparties } from '@/components/analytics/TopCounterparties';
 import { useAuth } from '@/hooks/useAuth';
 import { useSync } from '@/hooks/useSync';
-import { syncApi } from '@/lib/api';
-import { formatDateTime, getRelativeTime } from '@/lib/utils';
+import { syncApi, analyticsApi } from '@/lib/api';
+import { getRelativeTime } from '@/lib/utils';
 import type { SyncStatus } from '@/types';
-import { FileText, Download, Upload, RefreshCw, ArrowRight } from 'lucide-react';
+import type { AnalyticsSummary, AutoSyncConfig } from '@/types/analytics';
+import { FileText, Download, Upload, RefreshCw, ArrowRight, Settings, Timer } from 'lucide-react';
 import Link from 'next/link';
 
 export default function DashboardPage() {
@@ -23,6 +28,12 @@ export default function DashboardPage() {
   const [issuedStatus, setIssuedStatus] = useState<SyncStatus | null>(null);
   const [receivedStatus, setReceivedStatus] = useState<SyncStatus | null>(null);
   const [statusLoading, setStatusLoading] = useState(true);
+  const [analytics, setAnalytics] = useState<AnalyticsSummary | null>(null);
+  const [analyticsLoading, setAnalyticsLoading] = useState(true);
+
+  // Auto-sync state
+  const [autoSyncConfig, setAutoSyncConfig] = useState<AutoSyncConfig | null>(null);
+  const [autoSyncSaving, setAutoSyncSaving] = useState(false);
 
   // Redirect if not authenticated
   useEffect(() => {
@@ -31,7 +42,7 @@ export default function DashboardPage() {
     }
   }, [authLoading, isAuthenticated, router]);
 
-  // Fetch sync status on mount
+  // Fetch sync status and analytics on mount
   useEffect(() => {
     if (isAuthenticated) {
       Promise.all([
@@ -42,6 +53,15 @@ export default function DashboardPage() {
         if (received.data) setReceivedStatus(received.data);
         setStatusLoading(false);
       });
+
+      analyticsApi.get({ months: 12 }).then(({ data }) => {
+        if (data) setAnalytics(data);
+        setAnalyticsLoading(false);
+      });
+
+      syncApi.getAutoSyncConfig().then(({ data }) => {
+        if (data) setAutoSyncConfig(data);
+      });
     }
   }, [isAuthenticated]);
 
@@ -49,12 +69,27 @@ export default function DashboardPage() {
     await syncIssued();
     const { data } = await syncApi.getStatus('subject1');
     if (data) setIssuedStatus(data);
+    // Refresh analytics
+    const { data: newAnalytics } = await analyticsApi.get({ months: 12 });
+    if (newAnalytics) setAnalytics(newAnalytics);
   };
 
   const handleSyncReceived = async () => {
     await syncReceived();
     const { data } = await syncApi.getStatus('subject2');
     if (data) setReceivedStatus(data);
+    const { data: newAnalytics } = await analyticsApi.get({ months: 12 });
+    if (newAnalytics) setAnalytics(newAnalytics);
+  };
+
+  const handleAutoSyncToggle = async () => {
+    if (!autoSyncConfig) return;
+    setAutoSyncSaving(true);
+    const newConfig = { ...autoSyncConfig, enabled: !autoSyncConfig.enabled };
+    const { data } = await syncApi.updateAutoSyncConfig(newConfig);
+    if (data) setAutoSyncConfig(data);
+    else setAutoSyncConfig(newConfig);
+    setAutoSyncSaving(false);
   };
 
   if (authLoading) {
@@ -79,11 +114,19 @@ export default function DashboardPage() {
       />
 
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
-          <p className="text-gray-600 dark:text-gray-400 mt-1">
-            Zarządzaj fakturami w Krajowym Systemie e-Faktur
-          </p>
+        <div className="mb-8 flex items-center justify-between">
+          <div>
+            <h1 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Dashboard</h1>
+            <p className="text-gray-600 dark:text-gray-400 mt-1">
+              Zarządzaj fakturami w Krajowym Systemie e-Faktur
+            </p>
+          </div>
+          <Link href="/settings">
+            <Button variant="ghost" size="sm">
+              <Settings className="w-4 h-4 mr-2" />
+              Ustawienia
+            </Button>
+          </Link>
         </div>
 
         {syncError && (
@@ -91,6 +134,25 @@ export default function DashboardPage() {
             {syncError}
           </Alert>
         )}
+
+        {/* Analytics summary */}
+        {analyticsLoading ? (
+          <div className="flex justify-center py-8 mb-8">
+            <Spinner />
+          </div>
+        ) : analytics && analytics.invoiceCount > 0 ? (
+          <div className="space-y-6 mb-8">
+            <SummaryCards data={analytics} />
+            <MonthlyChart data={analytics.monthlyTurnover} />
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <TypeBreakdown data={analytics.typeSummary} />
+              <TopCounterparties title="Top nabywcy" data={analytics.topIssuedCounterparties} />
+            </div>
+            {analytics.topReceivedCounterparties.length > 0 && (
+              <TopCounterparties title="Top dostawcy" data={analytics.topReceivedCounterparties} />
+            )}
+          </div>
+        ) : null}
 
         {/* Quick actions */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
@@ -173,21 +235,41 @@ export default function DashboardPage() {
           </Card>
         </div>
 
-        {/* Info cards */}
+        {/* Bottom cards */}
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          {/* Auto-sync card */}
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
-                <h3 className="font-medium text-gray-900 dark:text-gray-100">Przeglądaj faktury</h3>
-                <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Zobacz wszystkie faktury zsynchronizowane z KSeF
-                </p>
-                <Link href="/invoices" className="mt-4 inline-block">
-                  <Button variant="ghost" size="sm">
-                    Przejdź do faktur
-                  </Button>
-                </Link>
+                <Timer className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+                <h3 className="font-medium text-gray-900 dark:text-gray-100">Auto-synchronizacja</h3>
+                {autoSyncConfig ? (
+                  <>
+                    <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                      {autoSyncConfig.enabled
+                        ? `Aktywna (co ${autoSyncConfig.intervalMinutes} min)`
+                        : 'Wyłączona'}
+                    </p>
+                    {autoSyncConfig.lastRunAt && (
+                      <p className="text-xs text-gray-400 dark:text-gray-500 mt-1">
+                        Ostatnio: {getRelativeTime(autoSyncConfig.lastRunAt)}
+                      </p>
+                    )}
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="mt-3"
+                      onClick={handleAutoSyncToggle}
+                      loading={autoSyncSaving}
+                    >
+                      {autoSyncConfig.enabled ? 'Wyłącz' : 'Włącz'}
+                    </Button>
+                  </>
+                ) : (
+                  <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+                    Nie skonfigurowano
+                  </p>
+                )}
               </div>
             </CardContent>
           </Card>
@@ -210,13 +292,16 @@ export default function DashboardPage() {
           <Card>
             <CardContent className="pt-6">
               <div className="text-center">
-                <div className="w-12 h-12 rounded-full bg-green-100 dark:bg-green-900/30 flex items-center justify-center mx-auto mb-3">
-                  <span className="text-2xl">🇵🇱</span>
-                </div>
-                <h3 className="font-medium text-gray-900 dark:text-gray-100">Środowisko testowe</h3>
+                <FileText className="w-12 h-12 text-gray-400 dark:text-gray-500 mx-auto mb-3" />
+                <h3 className="font-medium text-gray-900 dark:text-gray-100">Przeglądaj faktury</h3>
                 <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                  Połączono z ksef-test.mf.gov.pl
+                  Zobacz wszystkie faktury zsynchronizowane z KSeF
                 </p>
+                <Link href="/invoices" className="mt-4 inline-block">
+                  <Button variant="ghost" size="sm">
+                    Przejdź do faktur
+                  </Button>
+                </Link>
               </div>
             </CardContent>
           </Card>

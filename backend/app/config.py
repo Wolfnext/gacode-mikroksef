@@ -63,6 +63,24 @@ class Settings(BaseSettings):
     jwt_algorithm: str = Field(default="HS256")
     jwt_expiration_minutes: int = Field(default=60)
 
+    # ----- PDF Service -----
+    pdf_service_url: str = Field(
+        default="http://pdf-generator:3001",
+        description="URL of the PDF generator microservice",
+    )
+
+    # ----- Auto-Sync -----
+    auto_sync_enabled: bool = Field(
+        default=False,
+        description="Enable automatic invoice synchronization",
+    )
+    auto_sync_interval_minutes: int = Field(
+        default=60,
+        ge=5,
+        le=1440,
+        description="Auto-sync interval in minutes (5-1440)",
+    )
+
     # ----- Logging -----
     log_level: str = Field(default="INFO")
 
