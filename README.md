@@ -7,8 +7,47 @@ Open source i cloud-ready klient webowy do obsługi **Krajowego Systemu e-Faktur
 ![Python](https://img.shields.io/badge/python-3.11+-blue.svg)
 ![Node](https://img.shields.io/badge/node-18+-green.svg)
 
+## Zrzuty ekranu
+
+### Dashboard z analityką
+
+![Dashboard](docs/screenshots/02-dashboard.png)
+
+Panel z podsumowaniem obrotów, wykresem miesięcznym, podziałem wg typu faktury oraz rankingiem kontrahentów.
+
+### Lista faktur
+
+![Lista faktur](docs/screenshots/03-invoices-issued.png)
+
+Przeglądanie faktur wystawionych i otrzymanych z numerami KSeF, kwotami i typami.
+
+### Wyszukiwanie pełnotekstowe
+
+![Wyszukiwanie](docs/screenshots/06-search.png)
+
+Szybkie wyszukiwanie po nazwie kontrahenta, numerze faktury lub opisie pozycji.
+
+### Ustawienia i powiadomienia
+
+![Ustawienia](docs/screenshots/07-settings.png)
+
+Konfiguracja powiadomień webhook i e-mail z historią wysyłek.
+
+### Tryb ciemny
+
+![Dark mode](docs/screenshots/08-dark-mode.png)
+
+Pełne wsparcie dla trybu ciemnego we wszystkich widokach.
+
+### Logowanie
+
+![Logowanie](docs/screenshots/01-login.png)
+
+Prosty formularz logowania z walidacją NIP i informacją o środowisku KSeF.
+
 ## Spis treści
 
+- [Zrzuty ekranu](#zrzuty-ekranu)
 - [Funkcjonalności](#funkcjonalności)
 - [Architektura](#architektura)
 - [Wymagania](#wymagania)
@@ -29,9 +68,15 @@ Open source i cloud-ready klient webowy do obsługi **Krajowego Systemu e-Faktur
 - **Uwierzytelnianie z KSeF** - Metoda tokenowa z szyfrowaniem RSA/AES
 - **Przeglądanie faktur** - Lista faktur wystawionych i otrzymanych
 - **Filtrowanie** - Po dacie, typie, NIP kontrahenta
+- **Wyszukiwanie pełnotekstowe** - SQLite FTS5, szukaj po kontrahentach i opisach pozycji
 - **Szczegóły faktury** - Podgląd nagłówka i treści XML
-- **Pobieranie** - Eksport faktur w formacie XML
-- **Synchronizacja** - Automatyczne pobieranie faktur z KSeF
+- **Pobieranie XML i PDF** - Eksport faktur z kodem QR do weryfikacji w KSeF
+- **Synchronizacja** - Ręczne i automatyczne pobieranie faktur z KSeF
+- **Auto-synchronizacja** - Konfigurowalny scheduler (APScheduler)
+- **Dashboard analityczny** - Wykresy obrotów, podział wg typów, ranking kontrahentów
+- **Powiadomienia** - Webhook i e-mail po synchronizacji
+- **Generowanie PDF** - Mikroserwis z biblioteką ksef-pdf-generator
+- **Tryb ciemny** - Responsywny UI z pełnym wsparciem dark mode
 - **Cache lokalny** - SQLite do przechowywania faktur offline
 - **Zarządzanie sesją** - Automatyczne odświeżanie i kończenie sesji
 
@@ -41,7 +86,6 @@ Open source i cloud-ready klient webowy do obsługi **Krajowego Systemu e-Faktur
 - Pobieranie UPO (Urzędowe Poświadczenie Odbioru)
 - Uwierzytelnianie podpisem kwalifikowanym (XAdES)
 - Raportowanie faktur fałszywych
-- Eksport do PDF
 
 ## Architektura
 
@@ -58,17 +102,22 @@ Open source i cloud-ready klient webowy do obsługi **Krajowego Systemu e-Faktur
 │  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
 │  │ KSeF Client │  │ Crypto Svc  │  │ Session Manager     │ │
 │  └─────────────┘  └─────────────┘  └─────────────────────┘ │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────────────┐ │
+│  │ Scheduler   │  │ Notifier    │  │ Analytics           │ │
+│  └─────────────┘  └─────────────┘  └─────────────────────┘ │
 │                         │                                   │
-│                         ▼                                   │
-│                  ┌─────────────┐                           │
-│                  │  SQLite DB  │                           │
-│                  └─────────────┘                           │
+│                    ┌────┴────┐                              │
+│                    ▼         ▼                              │
+│             ┌──────────┐ ┌──────────────────┐              │
+│             │ SQLite   │ │ PDF Generator    │              │
+│             │ (FTS5)   │ │ :3001 (internal) │              │
+│             └──────────┘ └──────────────────┘              │
 └─────────────────────────────────────────────────────────────┘
                               │
                               ▼
 ┌─────────────────────────────────────────────────────────────┐
 │                      KSeF API                               │
-│              ksef-test.mf.gov.pl/api                        │
+│                 ksef.mf.gov.pl/api                          │
 └─────────────────────────────────────────────────────────────┘
 ```
 
