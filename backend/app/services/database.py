@@ -680,7 +680,7 @@ async def get_top_counterparties(
             SUM(gross_amount) as total_gross
         FROM invoices
         WHERE is_issued = ? AND {nip_col} IS NOT NULL AND {nip_col} != ''
-    """
+    """  # nosec B608 — nip_col/name_col are hardcoded column names, not user input
     params: list = [is_issued]
 
     if date_from:
