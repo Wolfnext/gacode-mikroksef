@@ -6,3 +6,11 @@ CVE-2025-7425
 
 # python-ecdsa Minerva timing attack — maintainer considers out of scope, no fix planned
 CVE-2024-23342
+
+# glob command injection — transitive dep in @akmf/ksef-fe-invoice-converter (build-time only)
+CVE-2025-64756
+
+# node-tar arbitrary file overwrite/creation — transitive deps in @akmf/ksef-fe-invoice-converter
+CVE-2026-23745
+CVE-2026-23950
+CVE-2026-24842
