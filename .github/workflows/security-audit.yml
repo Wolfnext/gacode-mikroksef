@@ -1,0 +1,131 @@
+name: Security Audit
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Run weekly on Monday at 08:00 UTC
+    - cron: '0 8 * * 1'
+
+jobs:
+  # ── Python backend ──────────────────────────────────────
+  backend-audit:
+    name: Backend (Python)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: pip-audit — check for known vulnerabilities
+        run: |
+          pip install pip-audit
+          pip-audit --strict --desc
+
+      - name: Bandit — static security analysis
+        run: |
+          pip install bandit
+          bandit -r app/ -f json -o bandit-report.json || true
+          bandit -r app/ -ll
+
+      - name: Upload Bandit report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: bandit-report
+          path: backend/bandit-report.json
+
+  # ── Node.js frontend ────────────────────────────────────
+  frontend-audit:
+    name: Frontend (Node.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: npm audit — check for known vulnerabilities
+        run: npm audit --audit-level=high
+
+  # ── Node.js PDF microservice ────────────────────────────
+  pdf-generator-audit:
+    name: PDF Generator (Node.js)
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: pdf-generator
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+
+      - name: Enable pnpm
+        run: corepack enable && corepack prepare pnpm@latest --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile || pnpm install
+
+      - name: pnpm audit — check for known vulnerabilities
+        run: pnpm audit --audit-level=high || true
+
+  # ── Docker image scan ───────────────────────────────────
+  docker-scan:
+    name: Docker Image Scan (Trivy)
+    runs-on: ubuntu-latest
+    needs: [backend-audit, frontend-audit, pdf-generator-audit]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker images
+        run: |
+          docker build -t mikroksef-backend:audit ./backend
+          docker build -t mikroksef-frontend:audit ./frontend
+          docker build -t mikroksef-pdf-generator:audit ./pdf-generator
+
+      - name: Trivy — scan backend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: mikroksef-backend:audit
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+
+      - name: Trivy — scan frontend image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: mikroksef-frontend:audit
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: '1'
+
+      - name: Trivy — scan pdf-generator image
+        uses: aquasecurity/trivy-action@master
+        with:
+          image-ref: mikroksef-pdf-generator:audit
+          format: table
+          severity: HIGH,CRITICAL
+          exit-code: '1'
