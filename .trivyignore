@@ -1,0 +1,8 @@
+# glibc heap corruption — no fix in Debian 13 base image yet
+CVE-2026-0861
+
+# libxslt heap use-after-free — no fix in Debian 13 base image yet
+CVE-2025-7425
+
+# python-ecdsa Minerva timing attack — maintainer considers out of scope, no fix planned
+CVE-2024-23342

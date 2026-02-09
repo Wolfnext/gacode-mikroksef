@@ -115,6 +115,7 @@ jobs:
           format: table
           severity: HIGH,CRITICAL
           exit-code: '1'
+          trivyignores: .trivyignore
 
       - name: Trivy — scan frontend image
         uses: aquasecurity/trivy-action@master
@@ -123,6 +124,7 @@ jobs:
           format: table
           severity: HIGH,CRITICAL
           exit-code: '1'
+          trivyignores: .trivyignore
 
       - name: Trivy — scan pdf-generator image
         uses: aquasecurity/trivy-action@master
@@ -131,3 +133,4 @@ jobs:
           format: table
           severity: HIGH,CRITICAL
           exit-code: '1'
+          trivyignores: .trivyignore
